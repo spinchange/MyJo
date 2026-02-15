@@ -10,6 +10,8 @@
 #   myjo -tags                              - List all tags with counts
 #   myjo -machine "LUNA"                    - View entries from machine LUNA
 #   myjo -machines                          - List all machines with entry counts
+#   myjo -edit                              - Compose entry in external editor
+#   myjo -edit -plain                       - Editor entry, strip markdown
 #   myjo -lock                              - Encrypt all journal files
 #   myjo -unlock                            - Decrypt all journal files
 #   myjo -setup                             - Re-run first-time setup
@@ -25,7 +27,9 @@ param(
     [switch]$Machines,
     [switch]$Lock,
     [switch]$Unlock,
-    [switch]$Setup
+    [switch]$Setup,
+    [switch]$Edit,
+    [switch]$Plain
 )
 
 # --- Configuration ---
@@ -433,6 +437,74 @@ if (-not (Test-Path $journalDir)) {
 
 # Cache password within a session so the user isn't prompted repeatedly
 $script:cachedPassword = $null
+
+# --- Editor helpers ---
+function Get-EditorCommand {
+    if ($env:EDITOR) { return $env:EDITOR }
+    return "notepad.exe"
+}
+
+function ConvertFrom-MarkdownText {
+    param([string]$Text)
+    # Headers: ## Heading → Heading
+    $Text = $Text -replace '(?m)^#{1,6}\s+', ''
+    # Bold/italic combos: ***text*** or ___text___
+    $Text = $Text -replace '\*{3}(.+?)\*{3}', '$1'
+    $Text = $Text -replace '_{3}(.+?)_{3}', '$1'
+    # Bold: **text** or __text__
+    $Text = $Text -replace '\*{2}(.+?)\*{2}', '$1'
+    $Text = $Text -replace '_{2}(.+?)_{2}', '$1'
+    # Italic: *text* or _text_
+    $Text = $Text -replace '(?<!\w)\*(.+?)\*(?!\w)', '$1'
+    $Text = $Text -replace '(?<!\w)_(.+?)_(?!\w)', '$1'
+    # Inline code: `text`
+    $Text = $Text -replace '`(.+?)`', '$1'
+    # Links: [text](url) → text (url)
+    $Text = $Text -replace '\[(.+?)\]\((.+?)\)', '$1 ($2)'
+    return $Text
+}
+
+function New-EditorEntry {
+    param([switch]$StripMarkdown)
+    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $tempFile = Join-Path $env:TEMP "myjo_entry_$timestamp.md"
+    $header = "<!-- Write your journal entry below. Lines starting with <!-- are ignored. Save and close to submit. -->"
+    $header | Out-File -FilePath $tempFile -Encoding UTF8
+
+    $editorCmd = Get-EditorCommand
+    # Split command to handle args like "code --wait"
+    $parts = $editorCmd -split '\s+', 2
+    $exe = $parts[0]
+    if ($parts.Length -gt 1) {
+        $editorArgs = "$($parts[1]) `"$tempFile`""
+    } else {
+        $editorArgs = "`"$tempFile`""
+    }
+
+    $proc = Start-Process -FilePath $exe -ArgumentList $editorArgs -PassThru -Wait
+    if (-not (Test-Path $tempFile)) {
+        Write-Host "Temp file not found. Nothing saved." -ForegroundColor Yellow
+        return
+    }
+
+    $lines = Get-Content $tempFile
+    # Strip HTML comment lines
+    $contentLines = $lines | Where-Object { $_ -notmatch '^\s*<!--.*-->\s*$' }
+    $text = ($contentLines -join "`n").Trim()
+
+    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        Write-Host "Empty entry, nothing saved." -ForegroundColor Yellow
+        return
+    }
+
+    if ($StripMarkdown) {
+        $text = ConvertFrom-MarkdownText $text
+    }
+
+    Add-Entry $text
+}
 
 # --- Core functions ---
 function Get-TodayFileName {
@@ -915,6 +987,11 @@ if ($Unlock) {
     exit 0
 }
 
+if ($Edit) {
+    New-EditorEntry -StripMarkdown:$Plain
+    exit 0
+}
+
 if ($QuickEntry) {
     $text = $QuickEntry -join " "
     Add-Entry $text
@@ -935,6 +1012,7 @@ while ($true) {
     Write-Host "  7. List all tags"
     Write-Host "  8. Edit entry (today)"
     Write-Host "  9. Delete entry (today)"
+    Write-Host "  E. New entry (editor)"
     Write-Host "  M. Filter by machine"
     Write-Host "  L. List all machines"
     if (Test-JournalLocked $journalDir) {
@@ -963,6 +1041,7 @@ while ($true) {
         "7" { Show-AllTags }
         "8" { Edit-Entry }
         "9" { Remove-Entry }
+        "E" { New-EditorEntry }
         "M" {
             $machineInput = Read-Host "Machine name"
             Filter-ByMachine $machineInput

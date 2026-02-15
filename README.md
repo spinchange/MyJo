@@ -58,6 +58,18 @@ myjo -machine LUNA           # Show entries from machine LUNA
 myjo -machines               # List all machines with entry counts
 ```
 
+### Editor Entry
+```powershell
+myjo -edit                   # Open external editor to compose an entry
+myjo -edit -plain            # Open editor, strip markdown formatting before saving
+```
+
+By default, MyJo opens `notepad.exe`. Set the `$EDITOR` environment variable to use a different editor:
+```powershell
+$env:EDITOR = "code --wait"   # VS Code (--wait is required)
+$env:EDITOR = "notepad++"     # Notepad++
+```
+
 ### Encryption
 ```powershell
 myjo -lock                   # Encrypt all journal files (prompts for password)
@@ -89,6 +101,7 @@ Just run `myjo` with no arguments to open the interactive menu:
   7. List all tags
   8. Edit entry (today)
   9. Delete entry (today)
+  E. New entry (editor)
   M. Filter by machine
   L. List all machines
   K. Lock journal
