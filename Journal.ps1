@@ -15,6 +15,9 @@
 #   myjo -editor "code --wait"              - Set preferred editor
 #   myjo -lock                              - Encrypt all journal files
 #   myjo -unlock                            - Decrypt all journal files
+#   myjo -notebook work                     - Switch to notebook "work"
+#   myjo -notebook work "G:\Work Journal"   - Create notebook with path
+#   myjo -notebooks                         - List all notebooks
 #   myjo -setup                             - Re-run first-time setup
 
 param(
@@ -31,7 +34,9 @@ param(
     [switch]$Setup,
     [switch]$Edit,
     [switch]$Plain,
-    [string]$Editor
+    [string]$Editor,
+    [string]$Notebook,
+    [switch]$Notebooks
 )
 
 # --- Configuration ---
@@ -412,7 +417,7 @@ function Initialize-Config {
     $editorChoice = Read-Host "Editor command (Enter for notepad.exe)"
     if ([string]::IsNullOrWhiteSpace($editorChoice)) { $editorChoice = "notepad.exe" }
 
-    $configLines = @($path)
+    $configLines = @("notebook:default=$path", "active=default")
     if ($encChoice -eq "Y") {
         $configLines += "encryption=enabled"
         Write-Host "Encryption enabled. Use 'myjo -lock' to encrypt your journal." -ForegroundColor Green
@@ -436,7 +441,64 @@ if ($Setup -or -not (Test-Path $configFile)) {
     if ($Setup) { exit 0 }
 }
 
-$journalDir = (Get-Content $configFile -First 1).Trim()
+# --- Config parsing ---
+function Get-ConfigValue {
+    param([string]$Path)
+    $cfg = @{ notebooks = @{}; settings = @{} }
+    if (-not (Test-Path $Path)) { return $cfg }
+    $lines = Get-Content $Path
+    foreach ($line in $lines) {
+        $l = $line.Trim()
+        if ($l -match '^notebook:([^=]+)=(.+)$') {
+            $cfg.notebooks[$Matches[1]] = $Matches[2]
+        } elseif ($l -match '^([^=]+)=(.*)$') {
+            $cfg.settings[$Matches[1]] = $Matches[2]
+        }
+    }
+    return $cfg
+}
+
+function Write-Config {
+    param([hashtable]$Config)
+    $lines = @()
+    foreach ($nb in ($Config.notebooks.GetEnumerator() | Sort-Object Name)) {
+        $lines += "notebook:$($nb.Key)=$($nb.Value)"
+    }
+    foreach ($s in ($Config.settings.GetEnumerator() | Sort-Object Name)) {
+        $lines += "$($s.Key)=$($s.Value)"
+    }
+    $lines | Out-File -FilePath $configFile -Encoding UTF8
+}
+
+# Auto-migrate old config format (bare path on line 1)
+function Migrate-ConfigIfNeeded {
+    if (-not (Test-Path $configFile)) { return }
+    $firstLine = (Get-Content $configFile -First 1).Trim()
+    if ($firstLine -notmatch '=' -and $firstLine -ne '') {
+        # Old format: line 1 is a bare path
+        $oldLines = Get-Content $configFile
+        $newLines = @("notebook:default=$firstLine", "active=default")
+        foreach ($line in ($oldLines | Select-Object -Skip 1)) {
+            if ($line.Trim() -ne '') { $newLines += $line.Trim() }
+        }
+        $newLines | Out-File -FilePath $configFile -Encoding UTF8
+    }
+}
+
+Migrate-ConfigIfNeeded
+$script:config = Get-ConfigValue $configFile
+
+# Determine active notebook
+$activeNotebook = if ($script:config.settings.ContainsKey('active')) { $script:config.settings['active'] } else { 'default' }
+if ($script:config.notebooks.Count -eq 0) {
+    Write-Host "No notebooks configured. Run 'myjo -setup'." -ForegroundColor Red
+    exit 1
+}
+if (-not $script:config.notebooks.ContainsKey($activeNotebook)) {
+    Write-Host "Active notebook '$activeNotebook' not found. Run 'myjo -setup'." -ForegroundColor Red
+    exit 1
+}
+$journalDir = $script:config.notebooks[$activeNotebook]
 
 # Validate the journal path is accessible
 if (-not (Test-Path $journalDir)) {
@@ -448,6 +510,107 @@ if (-not (Test-Path $journalDir)) {
 
 # Cache password within a session so the user isn't prompted repeatedly
 $script:cachedPassword = $null
+
+# --- Notebook functions ---
+function Switch-Notebook {
+    param([string]$Name)
+    $Name = $Name.ToLower()
+
+    # Check if remaining args provide a path for creating a new notebook
+    $nbPath = $null
+    if ($QuickEntry -and $QuickEntry.Count -gt 0) {
+        $nbPath = $QuickEntry -join " "
+    }
+
+    if ($nbPath) {
+        # Create new notebook
+        if (-not (Test-Path $nbPath)) {
+            $create = Read-Host "Folder '$nbPath' doesn't exist. Create it? (Y/N)"
+            if ($create -eq "Y") {
+                New-Item -ItemType Directory -Path $nbPath -Force | Out-Null
+                Write-Host "Created: $nbPath" -ForegroundColor Green
+            } else {
+                Write-Host "Cancelled." -ForegroundColor Yellow
+                return
+            }
+        }
+        $script:config.notebooks[$Name] = $nbPath
+        $script:config.settings['active'] = $Name
+        Write-Config $script:config
+        Write-Host "Notebook '$Name' created and activated. Path: $nbPath" -ForegroundColor Green
+    } else {
+        # Switch to existing notebook
+        if (-not $script:config.notebooks.ContainsKey($Name)) {
+            Write-Host "Notebook '$Name' not found. Create it with: myjo -notebook $Name ""<path>""" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Available notebooks:" -ForegroundColor Cyan
+            foreach ($nb in $script:config.notebooks.GetEnumerator()) {
+                $marker = if ($nb.Key -eq $activeNotebook) { " *" } else { "" }
+                Write-Host "  $($nb.Key)$marker  ->  $($nb.Value)" -ForegroundColor White
+            }
+            return
+        }
+        $script:config.settings['active'] = $Name
+        Write-Config $script:config
+        Write-Host "Switched to notebook '$Name'. Path: $($script:config.notebooks[$Name])" -ForegroundColor Green
+    }
+}
+
+function Show-Notebooks {
+    if ($script:config.notebooks.Count -eq 0) {
+        Write-Host "No notebooks configured." -ForegroundColor Yellow
+        return
+    }
+    Write-Host ""
+    Write-Host "Notebooks:" -ForegroundColor Cyan
+    foreach ($nb in ($script:config.notebooks.GetEnumerator() | Sort-Object Name)) {
+        $marker = if ($nb.Key -eq $activeNotebook) { " *" } else { "" }
+        Write-Host "  $($nb.Key)$marker  ->  $($nb.Value)" -ForegroundColor White
+    }
+    Write-Host ""
+    Write-Host "Active: $activeNotebook" -ForegroundColor Gray
+    Write-Host ""
+}
+
+function Interactive-SwitchNotebook {
+    Show-Notebooks
+    $name = Read-Host "Notebook name to switch to (or 'new' to create)"
+    if ([string]::IsNullOrWhiteSpace($name)) { return }
+    if ($name -eq 'new') {
+        $newName = Read-Host "New notebook name"
+        if ([string]::IsNullOrWhiteSpace($newName)) { return }
+        $newPath = Read-Host "Folder path for '$newName'"
+        if ([string]::IsNullOrWhiteSpace($newPath)) { return }
+        $newName = $newName.ToLower()
+        if (-not (Test-Path $newPath)) {
+            $create = Read-Host "Folder '$newPath' doesn't exist. Create it? (Y/N)"
+            if ($create -eq "Y") {
+                New-Item -ItemType Directory -Path $newPath -Force | Out-Null
+                Write-Host "Created: $newPath" -ForegroundColor Green
+            } else {
+                Write-Host "Cancelled." -ForegroundColor Yellow
+                return
+            }
+        }
+        $script:config.notebooks[$newName] = $newPath
+        $script:config.settings['active'] = $newName
+        Write-Config $script:config
+        $script:activeNotebook = $newName
+        $script:journalDir = $newPath
+        Write-Host "Notebook '$newName' created and activated." -ForegroundColor Green
+    } else {
+        $name = $name.ToLower()
+        if (-not $script:config.notebooks.ContainsKey($name)) {
+            Write-Host "Notebook '$name' not found." -ForegroundColor Red
+            return
+        }
+        $script:config.settings['active'] = $name
+        Write-Config $script:config
+        $script:activeNotebook = $name
+        $script:journalDir = $script:config.notebooks[$name]
+        Write-Host "Switched to notebook '$name'." -ForegroundColor Green
+    }
+}
 
 # --- Editor helpers ---
 function Get-EditorCommand {
@@ -1004,24 +1167,24 @@ if ($Unlock) {
 }
 
 if ($Editor) {
-    # Save editor preference to config
-    $configLines = @(Get-Content $configFile)
-    $updated = $false
-    for ($i = 0; $i -lt $configLines.Count; $i++) {
-        if ($configLines[$i] -match '^editor=') {
-            $configLines[$i] = "editor=$Editor"
-            $updated = $true
-            break
-        }
-    }
-    if (-not $updated) { $configLines += "editor=$Editor" }
-    $configLines | Out-File -FilePath $configFile -Encoding UTF8
+    $script:config.settings['editor'] = $Editor
+    Write-Config $script:config
     Write-Host "Editor set to: $Editor" -ForegroundColor Green
     exit 0
 }
 
 if ($Edit) {
     New-EditorEntry -StripMarkdown:$Plain
+    exit 0
+}
+
+if ($Notebooks) {
+    Show-Notebooks
+    exit 0
+}
+
+if ($Notebook) {
+    Switch-Notebook $Notebook
     exit 0
 }
 
@@ -1034,8 +1197,9 @@ if ($QuickEntry) {
 # --- Interactive menu ---
 while ($true) {
     $lockState = if (Test-JournalLocked $journalDir) { " [LOCKED]" } else { "" }
+    $nbLabel = if ($activeNotebook -ne 'default') { " ($activeNotebook)" } else { "" }
     Write-Host ""
-    Write-Host "===== JOURNAL [$machineName]$lockState =====" -ForegroundColor Cyan
+    Write-Host "===== JOURNAL [$machineName]$nbLabel$lockState =====" -ForegroundColor Cyan
     Write-Host "  1. New entry"
     Write-Host "  2. View today"
     Write-Host "  3. View recent (last 7 days)"
@@ -1053,6 +1217,7 @@ while ($true) {
     } else {
         Write-Host "  K. Lock journal"
     }
+    Write-Host "  N. Switch notebook"
     Write-Host "  Q. Exit"
     Write-Host ""
 
@@ -1082,6 +1247,7 @@ while ($true) {
         "L" { Show-AllMachines }
         "K" { Lock-Journal $journalDir }
         "U" { Unlock-Journal $journalDir }
+        "N" { Interactive-SwitchNotebook }
         "Q" { exit 0 }
         default { Write-Host "Invalid choice." -ForegroundColor Red }
     }

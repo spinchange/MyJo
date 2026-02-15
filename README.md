@@ -9,6 +9,7 @@ A portable PowerShell command-line journal with hashtags, machine signatures, mu
 - **Machine signatures** - every entry is stamped with the computer name
 - **Multi-machine filtering** - see entries from a specific device
 - **AES-256 encryption** - lock your journal with a password
+- **Multiple notebooks** - organize entries into separate notebooks (work, personal, etc.)
 - **Portable** - runs from USB drives, cloud sync folders, network shares
 - **No dependencies** - pure PowerShell, works on Windows 5.1+ and PowerShell 7+
 
@@ -73,6 +74,19 @@ myjo -editor "notepad++"       # Set editor to Notepad++
 
 The editor preference is saved in your config (`~/.myjo/config.txt`). You can also set it during `myjo -setup`, or override it per-session with the `$EDITOR` environment variable.
 
+### Notebooks
+
+Organize entries into separate notebooks (e.g., work, personal, projects). Each notebook is a different folder.
+
+```powershell
+myjo -notebooks                           # List all notebooks
+myjo -notebook work                       # Switch to notebook "work"
+myjo -notebook work "G:\Work Journal"     # Create a new notebook with path
+myjo -notebook default                    # Switch back to default
+```
+
+Notebooks are stored in your config (`~/.myjo/config.txt`). Old configs (bare path on line 1) are auto-migrated to the new format on first use.
+
 ### Encryption
 ```powershell
 myjo -lock                   # Encrypt all journal files (prompts for password)
@@ -94,7 +108,7 @@ myjo -setup                  # Re-run the first-time setup wizard
 Just run `myjo` with no arguments to open the interactive menu:
 
 ```
-===== JOURNAL [MYPC] =====
+===== JOURNAL [MYPC] (work) =====
   1. New entry
   2. View today
   3. View recent (last 7 days)
@@ -108,6 +122,7 @@ Just run `myjo` with no arguments to open the interactive menu:
   M. Filter by machine
   L. List all machines
   K. Lock journal
+  N. Switch notebook
   Q. Exit
 ```
 
@@ -139,7 +154,7 @@ MyJo is designed to work across multiple computers:
 - Key derivation: **PBKDF2** with 100,000 iterations (SHA-256) via `Rfc2898DeriveBytes`
 - Each file gets a unique random 16-byte salt
 - Password is never stored - you must remember it
-- The config file (`~/.myjo/config.txt`) stores only the journal path and encryption preference
+- The config file (`~/.myjo/config.txt`) stores notebook paths, active notebook, and encryption preference
 
 ## Setting Up the Alias Manually
 
@@ -153,11 +168,20 @@ function myjo { & 'C:\path\to\Journal.ps1' @args }
 
 ```
 ~/.myjo/
-  config.txt              # Journal folder path + settings
+  config.txt              # Notebook paths, active notebook, settings
 
-<journal-folder>/
+<journal-folder>/         # Each notebook is a separate folder
   Journal_2026-02-15.txt  # One file per day
   .myjo-locked            # Present when journal is encrypted
+```
+
+Config file format:
+```
+notebook:default=G:\My Drive\Journal
+notebook:work=G:\My Drive\Work Journal
+active=default
+encryption=disabled
+editor=notepad.exe
 ```
 
 ## License
