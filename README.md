@@ -64,11 +64,14 @@ myjo -edit                   # Open external editor to compose an entry
 myjo -edit -plain            # Open editor, strip markdown formatting before saving
 ```
 
-By default, MyJo opens `notepad.exe`. Set the `$EDITOR` environment variable to use a different editor:
+By default, MyJo opens `notepad.exe`. Set your preferred editor with:
 ```powershell
-$env:EDITOR = "code --wait"   # VS Code (--wait is required)
-$env:EDITOR = "notepad++"     # Notepad++
+myjo -editor "emacs"           # Set editor to emacs
+myjo -editor "code --wait"     # Set editor to VS Code (--wait is required)
+myjo -editor "notepad++"       # Set editor to Notepad++
 ```
+
+The editor preference is saved in your config (`~/.myjo/config.txt`). You can also set it during `myjo -setup`, or override it per-session with the `$EDITOR` environment variable.
 
 ### Encryption
 ```powershell

@@ -12,6 +12,7 @@
 #   myjo -machines                          - List all machines with entry counts
 #   myjo -edit                              - Compose entry in external editor
 #   myjo -edit -plain                       - Editor entry, strip markdown
+#   myjo -editor "code --wait"              - Set preferred editor
 #   myjo -lock                              - Encrypt all journal files
 #   myjo -unlock                            - Decrypt all journal files
 #   myjo -setup                             - Re-run first-time setup
@@ -29,7 +30,8 @@ param(
     [switch]$Unlock,
     [switch]$Setup,
     [switch]$Edit,
-    [switch]$Plain
+    [switch]$Plain,
+    [string]$Editor
 )
 
 # --- Configuration ---
@@ -403,6 +405,13 @@ function Initialize-Config {
     Write-Host "You can lock/unlock your journal anytime with 'myjo -lock' and 'myjo -unlock'." -ForegroundColor Gray
     $encChoice = Read-Host "Enable encryption? (Y/N)"
 
+    # Ask about editor
+    Write-Host ""
+    Write-Host "Which editor should 'myjo -edit' open?" -ForegroundColor White
+    Write-Host "Examples: notepad, emacs, code --wait, notepad++" -ForegroundColor Gray
+    $editorChoice = Read-Host "Editor command (Enter for notepad.exe)"
+    if ([string]::IsNullOrWhiteSpace($editorChoice)) { $editorChoice = "notepad.exe" }
+
     $configLines = @($path)
     if ($encChoice -eq "Y") {
         $configLines += "encryption=enabled"
@@ -410,10 +419,12 @@ function Initialize-Config {
     } else {
         $configLines += "encryption=disabled"
     }
+    $configLines += "editor=$editorChoice"
 
     $configLines | Out-File -FilePath $configFile -Encoding UTF8
     Write-Host ""
     Write-Host "Config saved. Journal will be stored at: $path" -ForegroundColor Green
+    Write-Host "Editor: $editorChoice" -ForegroundColor Green
     Write-Host "Machine signature: $machineName" -ForegroundColor Green
     Write-Host "Re-run setup anytime with: myjo -setup" -ForegroundColor Gray
     Write-Host ""
@@ -441,6 +452,10 @@ $script:cachedPassword = $null
 # --- Editor helpers ---
 function Get-EditorCommand {
     if ($env:EDITOR) { return $env:EDITOR }
+    $configLines = Get-Content $configFile
+    foreach ($line in $configLines) {
+        if ($line -match '^editor=(.+)$') { return $Matches[1] }
+    }
     return "notepad.exe"
 }
 
@@ -985,6 +1000,23 @@ if ($Lock) {
 
 if ($Unlock) {
     Unlock-Journal $journalDir
+    exit 0
+}
+
+if ($Editor) {
+    # Save editor preference to config
+    $configLines = @(Get-Content $configFile)
+    $updated = $false
+    for ($i = 0; $i -lt $configLines.Count; $i++) {
+        if ($configLines[$i] -match '^editor=') {
+            $configLines[$i] = "editor=$Editor"
+            $updated = $true
+            break
+        }
+    }
+    if (-not $updated) { $configLines += "editor=$Editor" }
+    $configLines | Out-File -FilePath $configFile -Encoding UTF8
+    Write-Host "Editor set to: $Editor" -ForegroundColor Green
     exit 0
 }
 
