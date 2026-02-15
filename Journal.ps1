@@ -530,7 +530,7 @@ function Add-Entry {
             $header = "=== $(Get-Date -Format 'dddd, MMMM dd, yyyy') ==="
             $existingLines = @($header, "", $entry)
         } else {
-            $existingLines = @($existingLines) + @($entry)
+            $existingLines = @($existingLines) + @("", $entry)
         }
         Set-JournalFile -Dir $journalDir -FileName $fileName -Lines $existingLines -Password $script:cachedPassword
     } else {
@@ -540,6 +540,7 @@ function Add-Entry {
             $header | Out-File -FilePath $file -Encoding UTF8
             "" | Out-File -FilePath $file -Append -Encoding UTF8
         }
+        "" | Out-File -FilePath $file -Append -Encoding UTF8
         $entry | Out-File -FilePath $file -Append -Encoding UTF8
     }
 
