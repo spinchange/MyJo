@@ -156,6 +156,32 @@ MyJo is designed to work across multiple computers:
 - Password is never stored - you must remember it
 - The config file (`~/.myjo/config.txt`) stores notebook paths, active notebook, and encryption preference
 
+## Chrome Extension
+
+Send text to any notebook directly from your browser — right-click selected text or use the toolbar popup to send clipboard contents.
+
+### Setup
+
+1. Run the install script to register the native messaging host:
+   ```powershell
+   cd ~\Documents\MyJo\extension\host
+   .\install-host.ps1
+   ```
+
+2. In Chrome, go to `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the `extension\chrome` folder.
+
+3. Copy the extension ID from Chrome and re-run:
+   ```powershell
+   .\install-host.ps1 -ExtensionId "<your-extension-id>"
+   ```
+
+4. Reload the extension (click the refresh icon on the extension card).
+
+### Usage
+
+- **Right-click** selected text on any page → **Send to MyJo** → pick a notebook
+- **Toolbar icon** → select a notebook → **Send Clipboard**
+
 ## Setting Up the Alias Manually
 
 If you prefer not to use the installer, add this to your PowerShell profile (`$PROFILE`):
@@ -173,6 +199,19 @@ function myjo { & 'C:\path\to\Journal.ps1' @args }
 <journal-folder>/         # Each notebook is a separate folder
   Journal_2026-02-15.txt  # One file per day
   .myjo-locked            # Present when journal is encrypted
+
+extension/
+  chrome/                 # Chrome extension (load unpacked from here)
+    manifest.json
+    popup.html
+    popup.js
+    background.js
+    icons/icon48.png
+  host/                   # Native messaging host
+    myjo-host.ps1
+    myjo-host.bat
+    com.myjo.host.json
+    install-host.ps1
 ```
 
 Config file format:
