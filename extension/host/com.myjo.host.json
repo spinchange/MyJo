@@ -1,9 +1,0 @@
-﻿{
-    "description":  "MyJo Journal native messaging host",
-    "type":  "stdio",
-    "name":  "com.myjo.host",
-    "path":  "C:\\Users\\user\\Documents\\MyJo\\extension\\host\\myjo-host.bat",
-    "allowed_origins":  [
-                            "chrome-extension://mgkigflaiocdchmpknidfehopcmdllki/"
-                        ]
-}
