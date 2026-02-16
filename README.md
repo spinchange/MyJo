@@ -164,7 +164,7 @@ Send text to any notebook directly from your browser — right-click selected te
 
 1. Run the install script to register the native messaging host:
    ```powershell
-   cd ~\Documents\MyJo\extension\host
+   cd <your-myjo-folder>\extension\host
    .\install-host.ps1
    ```
 
