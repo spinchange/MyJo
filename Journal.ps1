@@ -376,6 +376,29 @@ function Ensure-Password {
 function Initialize-Config {
     if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
 
+    # Preserve existing notebooks if re-running setup
+    $existingNotebooks = @{}
+    $existingActive = $null
+    if (Test-Path $configFile) {
+        $existing = Get-ConfigValue $configFile
+        if ($existing.notebooks.Count -gt 0) {
+            $existingNotebooks = $existing.notebooks
+            $existingActive = $existing.settings['active']
+            Write-Host ""
+            Write-Host "Existing notebooks found:" -ForegroundColor Yellow
+            foreach ($nb in ($existingNotebooks.GetEnumerator() | Sort-Object Name)) {
+                $marker = if ($nb.Key -eq $existingActive) { " *" } else { "" }
+                Write-Host "  $($nb.Key)$marker  ->  $($nb.Value)" -ForegroundColor White
+            }
+            Write-Host ""
+            $keepNotebooks = Read-Host "Keep existing notebooks? (Y/N)"
+            if ($keepNotebooks -ne "Y") {
+                $existingNotebooks = @{}
+                $existingActive = $null
+            }
+        }
+    }
+
     Write-Host ""
     Write-Host "===== MYJO FIRST-TIME SETUP =====" -ForegroundColor Cyan
     Write-Host ""
@@ -417,7 +440,18 @@ function Initialize-Config {
     $editorChoice = Read-Host "Editor command (Enter for notepad.exe)"
     if ([string]::IsNullOrWhiteSpace($editorChoice)) { $editorChoice = "notepad.exe" }
 
-    $configLines = @("notebook:default=$path", "active=default")
+    # Build config, preserving notebooks if kept
+    if ($existingNotebooks.Count -gt 0) {
+        $existingNotebooks['default'] = $path
+    }
+    $notebooks = if ($existingNotebooks.Count -gt 0) { $existingNotebooks } else { @{ default = $path } }
+    $active = if ($existingActive) { $existingActive } else { 'default' }
+
+    $configLines = @()
+    foreach ($nb in ($notebooks.GetEnumerator() | Sort-Object Name)) {
+        $configLines += "notebook:$($nb.Key)=$($nb.Value)"
+    }
+    $configLines += "active=$active"
     if ($encChoice -eq "Y") {
         $configLines += "encryption=enabled"
         Write-Host "Encryption enabled. Use 'myjo -lock' to encrypt your journal." -ForegroundColor Green
