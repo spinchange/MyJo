@@ -30,7 +30,7 @@ $notebook = $message.notebook
 $text = $message.text
 
 # Call myjo
-$myjoScript = "$env:USERPROFILE\Documents\MyJo\Journal.ps1"
+$myjoScript = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))) "Journal.ps1"
 
 try {
     # Switch notebook then add entry (suppress all output to avoid corrupting stdout)
