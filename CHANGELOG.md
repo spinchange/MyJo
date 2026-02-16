@@ -22,3 +22,8 @@
   - Active notebook name shown in menu header
 - Auto-migration of old config format (bare path on line 1) to new `notebook:name=path` format
 - Setup preserves existing notebooks when re-run
+- **Chrome extension** — send text to any notebook from the browser
+  - Right-click selected text → "Send to MyJo" → pick a notebook
+  - Toolbar popup with notebook dropdown and "Send Clipboard" button
+  - Remembers last-used notebook
+  - Native messaging host with install script for one-time setup
