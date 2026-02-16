@@ -33,9 +33,26 @@ $text = $message.text
 $myjoScript = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))) "Journal.ps1"
 
 try {
-    # Switch notebook then add entry (suppress all output to avoid corrupting stdout)
+    # Read current active notebook so we can restore it after
+    $configFile = "$env:USERPROFILE\.myjo\config.txt"
+    $previousActive = $null
+    if (Test-Path $configFile) {
+        foreach ($line in (Get-Content $configFile)) {
+            if ($line -match '^active=(.+)$') {
+                $previousActive = $Matches[1]
+                break
+            }
+        }
+    }
+
+    # Switch notebook, add entry, then restore original active notebook
     & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $notebook 2>&1 | Out-Null
     & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript $text 2>&1 | Out-Null
+
+    # Restore the previously active notebook if it was different
+    if ($previousActive -and $previousActive -ne $notebook) {
+        & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $previousActive 2>&1 | Out-Null
+    }
 
     $response = '{"success":true}'
 } catch {
