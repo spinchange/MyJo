@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "MyJo Journal",
+  "version": "1.0",
+  "description": "Send text to MyJo journal notebooks from your browser",
+  "permissions": ["contextMenus", "activeTab", "nativeMessaging", "storage", "clipboardRead"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "48": "icons/icon48.png"
+  }
+}

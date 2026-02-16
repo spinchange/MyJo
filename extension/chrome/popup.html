@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 260px;
+      padding: 12px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      margin: 0;
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #333;
+    }
+    select {
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      font-size: 13px;
+      background: #4285f4;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3367d6;
+    }
+    #status {
+      margin-top: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      text-align: center;
+      display: none;
+    }
+    #status.success {
+      display: block;
+      background: #e6f4ea;
+      color: #1e7e34;
+    }
+    #status.error {
+      display: block;
+      background: #fce8e6;
+      color: #c5221f;
+    }
+  </style>
+</head>
+<body>
+  <h3>MyJo Journal</h3>
+  <select id="notebook">
+    <option value="default">default</option>
+    <option value="work">work</option>
+    <option value="personal">personal</option>
+    <option value="projects">projects</option>
+    <option value="devlog">devlog</option>
+    <option value="research">research</option>
+    <option value="trading">trading</option>
+    <option value="health">health</option>
+    <option value="learning">learning</option>
+    <option value="watchlist">watchlist</option>
+    <option value="commonplace">commonplace</option>
+  </select>
+  <button id="sendBtn">Send Clipboard</button>
+  <div id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
