@@ -11,6 +11,9 @@
 - `Install-QuickAdd.ps1` — creates two Desktop shortcuts: Ctrl+Alt+A (Quick Add popup) and Ctrl+Alt+M (interactive menu)
 - `Rebuild-Zip.ps1` — rebuilds MyJo.zip from the current repo contents; run before committing the ZIP
 
+### Changed
+- Chrome extension popup and right-click context menu now load notebooks dynamically from config via the native host — adding a new notebook is automatically reflected after restarting Chrome, no manual editing required
+
 ## 2026-02-16
 
 ### Fixed

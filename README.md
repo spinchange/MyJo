@@ -182,6 +182,8 @@ Send text to any notebook directly from your browser — right-click selected te
 - **Right-click** selected text on any page → **Send to MyJo** → pick a notebook
 - **Toolbar icon** → select a notebook → **Send Clipboard**
 
+Notebooks are loaded dynamically from your config — adding a new notebook via `myjo -notebook` will appear automatically after restarting Chrome.
+
 ## Quick Add Popup
 
 A system-wide popup lets you add journal entries from any context on the machine — browser, editor, spreadsheet, or anywhere else — without opening a terminal.
