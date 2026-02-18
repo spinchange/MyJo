@@ -26,38 +26,52 @@ while ($totalRead -lt $messageLength) {
 $json = [System.Text.Encoding]::UTF8.GetString($messageBytes)
 $message = $json | ConvertFrom-Json
 
-$notebook = $message.notebook
-$text = $message.text
-
-# Call myjo
+$configFile = "$env:USERPROFILE\.myjo\config.txt"
 $myjoScript = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))) "Journal.ps1"
 
-try {
-    # Read current active notebook so we can restore it after
-    $configFile = "$env:USERPROFILE\.myjo\config.txt"
-    $previousActive = $null
+if ($message.action -eq "getNotebooks") {
+    # Return notebook list from config
+    $notebooks = @()
     if (Test-Path $configFile) {
         foreach ($line in (Get-Content $configFile)) {
-            if ($line -match '^active=(.+)$') {
-                $previousActive = $Matches[1]
-                break
+            if ($line -match '^notebook:([^=]+)=') {
+                $notebooks += $Matches[1].Trim()
             }
         }
     }
+    $notebooks = $notebooks | Sort-Object
+    $notebooksJson = ($notebooks | ForEach-Object { "`"$_`"" }) -join ","
+    $response = "{`"success`":true,`"notebooks`":[$notebooksJson]}"
+} else {
+    $notebook = $message.notebook
+    $text = $message.text
 
-    # Switch notebook, add entry, then restore original active notebook
-    & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $notebook 2>&1 | Out-Null
-    & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript $text 2>&1 | Out-Null
+    try {
+        # Read current active notebook so we can restore it after
+        $previousActive = $null
+        if (Test-Path $configFile) {
+            foreach ($line in (Get-Content $configFile)) {
+                if ($line -match '^active=(.+)$') {
+                    $previousActive = $Matches[1]
+                    break
+                }
+            }
+        }
 
-    # Restore the previously active notebook if it was different
-    if ($previousActive -and $previousActive -ne $notebook) {
-        & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $previousActive 2>&1 | Out-Null
+        # Switch notebook, add entry, then restore original active notebook
+        & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $notebook 2>&1 | Out-Null
+        & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript $text 2>&1 | Out-Null
+
+        # Restore the previously active notebook if it was different
+        if ($previousActive -and $previousActive -ne $notebook) {
+            & powershell -ExecutionPolicy Bypass -NoProfile -File $myjoScript -Notebook $previousActive 2>&1 | Out-Null
+        }
+
+        $response = '{"success":true}'
+    } catch {
+        $errMsg = $_.Exception.Message -replace '"', '\"'
+        $response = "{`"success`":false,`"error`":`"$errMsg`"}"
     }
-
-    $response = '{"success":true}'
-} catch {
-    $errMsg = $_.Exception.Message -replace '"', '\"'
-    $response = "{`"success`":false,`"error`":`"$errMsg`"}"
 }
 
 # Write response with 4-byte LE length prefix

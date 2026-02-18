@@ -3,23 +3,35 @@ const notebookSelect = document.getElementById("notebook");
 const sendBtn = document.getElementById("sendBtn");
 const statusDiv = document.getElementById("status");
 
-// Restore last-used notebook
-chrome.storage.local.get("lastNotebook", (data) => {
-  if (data.lastNotebook) {
-    notebookSelect.value = data.lastNotebook;
+function showStatus(message, isError) {
+  statusDiv.textContent = message;
+  statusDiv.className = isError ? "error" : "success";
+  setTimeout(() => { statusDiv.className = ""; statusDiv.style.display = "none"; }, 3000);
+}
+
+// Fetch notebooks from native host and populate dropdown
+chrome.runtime.sendNativeMessage(NATIVE_HOST, { action: "getNotebooks" }, (response) => {
+  if (chrome.runtime.lastError || !response || !response.success) {
+    showStatus("Could not load notebooks", true);
+    return;
   }
+
+  notebookSelect.innerHTML = response.notebooks
+    .map(nb => `<option value="${nb}">${nb}</option>`)
+    .join("");
+
+  // Restore last-used notebook
+  chrome.storage.local.get("lastNotebook", (data) => {
+    if (data.lastNotebook && notebookSelect.querySelector(`option[value="${data.lastNotebook}"]`)) {
+      notebookSelect.value = data.lastNotebook;
+    }
+  });
 });
 
 // Save selection on change
 notebookSelect.addEventListener("change", () => {
   chrome.storage.local.set({ lastNotebook: notebookSelect.value });
 });
-
-function showStatus(message, isError) {
-  statusDiv.textContent = message;
-  statusDiv.className = isError ? "error" : "success";
-  setTimeout(() => { statusDiv.className = ""; statusDiv.style.display = "none"; }, 3000);
-}
 
 sendBtn.addEventListener("click", async () => {
   // Read clipboard via execCommand (most reliable in extension popups)
