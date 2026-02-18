@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-02-17
+
+### Added
+- **Quick Add popup** (`QuickAdd.ps1`) — system-wide WinForms dialog launchable from any context on the machine (browser, editor, spreadsheet, etc.)
+  - Notebook dropdown pre-selected to active notebook
+  - Multiline text box with vertical scrollbar
+  - Ctrl+Enter to submit, Escape to cancel
+  - Always-on-top window
+- `Install-QuickAdd.ps1` — creates a Desktop shortcut with Ctrl+Alt+A hotkey
+
 ## 2026-02-16
 
 ### Fixed
