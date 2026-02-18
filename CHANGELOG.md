@@ -9,6 +9,7 @@
   - Ctrl+Enter to submit, Escape to cancel
   - Always-on-top window
 - `Install-QuickAdd.ps1` — creates two Desktop shortcuts: Ctrl+Alt+A (Quick Add popup) and Ctrl+Alt+M (interactive menu)
+- `Rebuild-Zip.ps1` — rebuilds MyJo.zip from the current repo contents; run before committing the ZIP
 
 ## 2026-02-16
 

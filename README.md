@@ -232,7 +232,8 @@ function myjo { & 'C:\path\to\Journal.ps1' @args }
   .myjo-locked            # Present when journal is encrypted
 
 QuickAdd.ps1              # System-wide quick-add popup (Ctrl+Alt+A)
-Install-QuickAdd.ps1      # Creates the Desktop shortcut for QuickAdd
+Install-QuickAdd.ps1      # Creates Desktop shortcuts (Ctrl+Alt+A and Ctrl+Alt+M)
+Rebuild-Zip.ps1           # Rebuilds MyJo.zip from current repo contents
 
 extension/
   chrome/                 # Chrome extension (load unpacked from here)
