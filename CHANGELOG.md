@@ -8,7 +8,7 @@
   - Multiline text box with vertical scrollbar
   - Ctrl+Enter to submit, Escape to cancel
   - Always-on-top window
-- `Install-QuickAdd.ps1` — creates a Desktop shortcut with Ctrl+Alt+A hotkey
+- `Install-QuickAdd.ps1` — creates two Desktop shortcuts: Ctrl+Alt+A (Quick Add popup) and Ctrl+Alt+M (interactive menu)
 
 ## 2026-02-16
 

@@ -194,14 +194,24 @@ cd <your-myjo-folder>
 .\Install-QuickAdd.ps1
 ```
 
-This creates a **MyJo Quick Add** shortcut on your Desktop with the **Ctrl+Alt+A** hotkey. The shortcut must remain on the Desktop for the hotkey to work.
+This creates two Desktop shortcuts:
+
+| Hotkey | Action |
+|--------|--------|
+| Ctrl+Alt+A | Quick Add popup — type an entry from anywhere |
+| Ctrl+Alt+M | MyJo interactive menu — opens in PowerShell |
+
+Shortcuts must remain on the Desktop for hotkeys to work.
 
 ### Usage
 
-Press **Ctrl+Alt+A** from anywhere:
+**Quick Add (Ctrl+Alt+A):**
 - Select a notebook from the dropdown (pre-selected to your active notebook)
 - Type your entry in the text box
 - **Ctrl+Enter** to submit, **Escape** to cancel
+
+**Menu (Ctrl+Alt+M):**
+- Opens the full MyJo interactive menu in a PowerShell window
 
 ## Setting Up the Alias Manually
 
