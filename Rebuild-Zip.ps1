@@ -9,7 +9,7 @@ $zip = Join-Path $src 'MyJo.zip'
 $include = @(
     'Journal.ps1', 'Install.ps1', 'MyJo.psd1', 'MyJo.psm1',
     'README.md', 'LICENSE', 'CHANGELOG.md', '.gitignore',
-    'QuickAdd.ps1', 'Install-QuickAdd.ps1', 'Rebuild-Zip.ps1',
+    'QuickAdd.ps1', 'Install-QuickAdd.ps1', 'Rebuild-Zip.ps1', 'Generate-Dashboard.ps1',
     'extension\chrome\background.js', 'extension\chrome\manifest.json',
     'extension\chrome\popup.html', 'extension\chrome\popup.js',
     'extension\chrome\icons\icon48.png',

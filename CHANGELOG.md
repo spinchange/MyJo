@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-02-18
+
+### Added
+- `Generate-Dashboard.ps1` — generates a self-contained HTML dashboard from all journal data
+  - Summary stats bar: total entries, total words, active notebooks, days active, current streak, best streak, date range
+  - Notebook cards grid with per-notebook entry/word/day counts and last-active date
+  - GitHub-style activity heatmap (past 52 weeks) with per-day tooltips
+  - Recent Entries feed: last 20 entries across all notebooks, newest first
+  - Collapsible Index by notebook, listing every day with entry counts
+  - Dark theme, no external dependencies; output is a single `.html` file
+  - Run with: `.\Generate-Dashboard.ps1` (opens in default browser)
+
 ## 2026-02-17
 
 ### Added

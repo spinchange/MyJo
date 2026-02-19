@@ -1055,13 +1055,33 @@ function Show-NumberedEntries {
     return $entries
 }
 
-function Edit-Entry {
-    $fileName = Get-TodayFileName
+function Select-JournalDate {
+    param([string]$Prompt = "Date (yyyy-MM-dd, or Enter for today)")
+    Show-Calendar
+    $todayStr = Get-Date -Format 'yyyy-MM-dd'
+    $dateInput = Read-Host $Prompt
+    $date = if ([string]::IsNullOrWhiteSpace($dateInput)) { $todayStr } else { $dateInput.Trim() }
+    $fileName = "Journal_$date.txt"
+    $exists = if (Test-JournalLocked $journalDir) {
+        Test-Path (Join-Path $journalDir "$fileName.enc")
+    } else {
+        Test-Path (Join-Path $journalDir $fileName)
+    }
+    if (-not $exists) {
+        Write-Host "No entries found for $date." -ForegroundColor Yellow
+        return $null
+    }
+    return $fileName
+}
 
+function Edit-Entry {
     $locked = Test-JournalLocked $journalDir
     if ($locked) {
         if (-not (Ensure-Password $journalDir)) { return }
     }
+
+    $fileName = Select-JournalDate
+    if ($null -eq $fileName) { return }
 
     $entries = Show-NumberedEntries $fileName
     if ($entries.Count -eq 0) { return }
@@ -1101,12 +1121,13 @@ function Edit-Entry {
 }
 
 function Remove-Entry {
-    $fileName = Get-TodayFileName
-
     $locked = Test-JournalLocked $journalDir
     if ($locked) {
         if (-not (Ensure-Password $journalDir)) { return }
     }
+
+    $fileName = Select-JournalDate -Prompt "Date (yyyy-MM-dd, or Enter for today)"
+    if ($null -eq $fileName) { return }
 
     $entries = Show-NumberedEntries $fileName
     if ($entries.Count -eq 0) { return }
@@ -1228,6 +1249,17 @@ if ($QuickEntry) {
     exit 0
 }
 
+function Invoke-Dashboard {
+    $dashScript = Join-Path $PSScriptRoot "Generate-Dashboard.ps1"
+    if (-not (Test-Path $dashScript)) {
+        Write-Host "Generate-Dashboard.ps1 not found at: $dashScript" -ForegroundColor Red
+        return
+    }
+    $outPath = Join-Path $PSScriptRoot "dashboard.html"
+    Write-Host "Generating dashboard..." -ForegroundColor Cyan
+    & powershell -ExecutionPolicy Bypass -File $dashScript -OutputPath $outPath
+}
+
 # --- Interactive menu ---
 while ($true) {
     $lockState = if (Test-JournalLocked $journalDir) { " [LOCKED]" } else { "" }
@@ -1241,8 +1273,8 @@ while ($true) {
     Write-Host "  5. Search entries"
     Write-Host "  6. Filter by tag"
     Write-Host "  7. List all tags"
-    Write-Host "  8. Edit entry (today)"
-    Write-Host "  9. Delete entry (today)"
+    Write-Host "  8. Edit entry"
+    Write-Host "  9. Delete entry"
     Write-Host "  E. New entry (editor)"
     Write-Host "  M. Filter by machine"
     Write-Host "  L. List all machines"
@@ -1252,6 +1284,7 @@ while ($true) {
         Write-Host "  K. Lock journal"
     }
     Write-Host "  N. Switch notebook"
+    Write-Host "  D. Generate dashboard"
     Write-Host "  Q. Exit"
     Write-Host ""
 
@@ -1282,6 +1315,7 @@ while ($true) {
         "K" { Lock-Journal $journalDir }
         "U" { Unlock-Journal $journalDir }
         "N" { Interactive-SwitchNotebook }
+        "D" { Invoke-Dashboard }
         "Q" { exit 0 }
         default { Write-Host "Invalid choice." -ForegroundColor Red }
     }
