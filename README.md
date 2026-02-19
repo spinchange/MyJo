@@ -10,6 +10,7 @@ A portable PowerShell command-line journal with hashtags, machine signatures, mu
 - **Multi-machine filtering** - see entries from a specific device
 - **AES-256 encryption** - lock your journal with a password
 - **Multiple notebooks** - organize entries into separate notebooks (work, personal, etc.)
+- **HTML dashboard** - generate a stats dashboard with activity heatmap, notebook cards, and entry index
 - **Portable** - runs from USB drives, cloud sync folders, network shares
 - **No dependencies** - pure PowerShell, works on Windows 5.1+ and PowerShell 7+
 
@@ -116,15 +117,18 @@ Just run `myjo` with no arguments to open the interactive menu:
   5. Search entries
   6. Filter by tag
   7. List all tags
-  8. Edit entry (today)
-  9. Delete entry (today)
+  8. Edit entry
+  9. Delete entry
   E. New entry (editor)
   M. Filter by machine
   L. List all machines
   K. Lock journal
   N. Switch notebook
+  D. Generate dashboard
   Q. Exit
 ```
+
+Options **8** and **9** show a date picker (defaulting to today) so you can edit or delete entries from any past date.
 
 ## Multi-Machine Setup
 
@@ -184,6 +188,26 @@ Send text to any notebook directly from your browser — right-click selected te
 
 Notebooks are loaded dynamically from your config — adding a new notebook via `myjo -notebook` will appear automatically after restarting Chrome.
 
+## HTML Dashboard
+
+Generate a self-contained HTML dashboard from all your journal data:
+
+```powershell
+.\Generate-Dashboard.ps1
+```
+
+The dashboard opens automatically in your default browser and includes:
+
+- **Summary stats** — total entries, words, active notebooks, days active, current and best streaks
+- **Notebook cards** — per-notebook entry/word/day counts and last-active date
+- **Activity heatmap** — GitHub-style grid of the past 52 weeks
+- **Recent entries** — last 20 entries across all notebooks, newest first
+- **Index** — collapsible list of every day per notebook with entry counts
+
+You can also generate the dashboard from the interactive menu with **D**.
+
+The output (`dashboard.html`) is a single self-contained file with no external dependencies.
+
 ## Quick Add Popup
 
 A system-wide popup lets you add journal entries from any context on the machine — browser, editor, spreadsheet, or anywhere else — without opening a terminal.
@@ -235,6 +259,7 @@ function myjo { & 'C:\path\to\Journal.ps1' @args }
 
 QuickAdd.ps1              # System-wide quick-add popup (Ctrl+Alt+A)
 Install-QuickAdd.ps1      # Creates Desktop shortcuts (Ctrl+Alt+A and Ctrl+Alt+M)
+Generate-Dashboard.ps1    # Generates dashboard.html from all journal data
 Rebuild-Zip.ps1           # Rebuilds MyJo.zip from current repo contents
 
 extension/
