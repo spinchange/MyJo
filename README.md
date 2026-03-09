@@ -254,7 +254,7 @@ function myjo { & 'C:\path\to\Journal.ps1' @args }
   config.txt              # Notebook paths, active notebook, settings
 
 <journal-folder>/         # Each notebook is a separate folder
-  Journal_2026-02-15.txt  # One file per day
+  Journal_2026-02-15.md   # One file per day (.md for new files, .txt also supported)
   .myjo-locked            # Present when journal is encrypted
 
 QuickAdd.ps1              # System-wide quick-add popup (Ctrl+Alt+A)

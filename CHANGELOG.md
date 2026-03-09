@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-08
+
+### Changed
+- New journal files are now created with `.md` extension instead of `.txt`
+- All file lookups now match both `.txt` and `.md` files — existing `.txt` entries continue to work with no migration needed
+- `Generate-Dashboard.ps1` updated to recognize both extensions when scanning notebook folders
+
 ## 2026-02-18
 
 ### Added

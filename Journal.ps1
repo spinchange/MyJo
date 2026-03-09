@@ -185,8 +185,8 @@ function Lock-Journal {
         return
     }
 
-    $txtFiles = Get-ChildItem $Dir -Filter "Journal_*.txt" -ErrorAction SilentlyContinue
-    if ($txtFiles.Count -eq 0) {
+    $txtFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)$' }
+    if ($null -eq $txtFiles -or $txtFiles.Count -eq 0) {
         Write-Host "No journal files to encrypt." -ForegroundColor Yellow
         return
     }
@@ -220,8 +220,8 @@ function Unlock-Journal {
         return
     }
 
-    $encFiles = Get-ChildItem $Dir -Filter "Journal_*.txt.enc" -ErrorAction SilentlyContinue
-    if ($encFiles.Count -eq 0) {
+    $encFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)\.enc$' }
+    if ($null -eq $encFiles -or $encFiles.Count -eq 0) {
         # Remove stale marker
         Remove-Item (Join-Path $Dir ".myjo-locked") -Force -ErrorAction SilentlyContinue
         Write-Host "No encrypted files found. Lock marker removed." -ForegroundColor Yellow
@@ -261,8 +261,8 @@ function Get-JournalContent {
     $locked = Test-JournalLocked $Dir
 
     if ($locked) {
-        $encFiles = Get-ChildItem $Dir -Filter "Journal_*.txt.enc" -ErrorAction SilentlyContinue
-        if ($encFiles.Count -eq 0) { return $result }
+        $encFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)\.enc$' }
+        if ($null -eq $encFiles -or $encFiles.Count -eq 0) { return $result }
 
         if (-not $Password) {
             $Password = Get-EncryptionPassword "Enter password to read journal"
@@ -287,7 +287,7 @@ function Get-JournalContent {
             }
         }
     } else {
-        $txtFiles = Get-ChildItem $Dir -Filter "Journal_*.txt" -ErrorAction SilentlyContinue
+        $txtFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)$' }
         foreach ($file in $txtFiles) {
             $result[$file.Name] = Get-Content $file.FullName
         }
@@ -351,8 +351,8 @@ function Ensure-Password {
     if (-not (Test-JournalLocked $Dir)) { return $true }
     if ($script:cachedPassword) {
         # Validate cached password
-        $encFiles = Get-ChildItem $Dir -Filter "Journal_*.txt.enc" -ErrorAction SilentlyContinue
-        if ($encFiles.Count -eq 0) { return $true }
+        $encFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)\.enc$' }
+        if ($null -eq $encFiles -or $encFiles.Count -eq 0) { return $true }
         $test = Unprotect-FileToMemory -EncPath $encFiles[0].FullName -Password $script:cachedPassword
         if ($null -ne $test) { return $true }
     }
@@ -361,8 +361,8 @@ function Ensure-Password {
         Write-Host "Password required." -ForegroundColor Red
         return $false
     }
-    $encFiles = Get-ChildItem $Dir -Filter "Journal_*.txt.enc" -ErrorAction SilentlyContinue
-    if ($encFiles.Count -gt 0) {
+    $encFiles = Get-ChildItem $Dir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)\.enc$' }
+    if ($null -ne $encFiles -and $encFiles.Count -gt 0) {
         $test = Unprotect-FileToMemory -EncPath $encFiles[0].FullName -Password $password
         if ($null -eq $test) {
             Write-Host "Wrong password." -ForegroundColor Red
@@ -720,16 +720,23 @@ function New-EditorEntry {
 
 # --- Core functions ---
 function Get-TodayFileName {
-    return "Journal_$(Get-Date -Format 'yyyy-MM-dd').txt"
+    return "Journal_$(Get-Date -Format 'yyyy-MM-dd').md"
 }
 
 function Get-TodayFile {
+    # Check if a .txt or .md version already exists
+    $dateStr = Get-Date -Format 'yyyy-MM-dd'
+    $existing = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match "^Journal_$dateStr\.(txt|md)$" }
+    if ($existing) {
+        return $existing[0].FullName
+    }
     return Join-Path $journalDir (Get-TodayFileName)
 }
 
 function Add-Entry {
     param([string]$Text)
-    $fileName = Get-TodayFileName
+    $todayFile = Get-TodayFile
+    $fileName = [System.IO.Path]::GetFileName($todayFile)
     $timestamp = Get-Date -Format 'HH:mm:ss'
     $entry = "[$timestamp @$machineName] $Text"
 
@@ -746,14 +753,13 @@ function Add-Entry {
         }
         Set-JournalFile -Dir $journalDir -FileName $fileName -Lines $existingLines -Password $script:cachedPassword
     } else {
-        $file = Get-TodayFile
-        if (-not (Test-Path $file)) {
+        if (-not (Test-Path $todayFile)) {
             $header = "=== $(Get-Date -Format 'dddd, MMMM dd, yyyy') ==="
-            $header | Out-File -FilePath $file -Encoding UTF8
-            "" | Out-File -FilePath $file -Append -Encoding UTF8
+            $header | Out-File -FilePath $todayFile -Encoding UTF8
+            "" | Out-File -FilePath $todayFile -Append -Encoding UTF8
         }
-        "" | Out-File -FilePath $file -Append -Encoding UTF8
-        $entry | Out-File -FilePath $file -Append -Encoding UTF8
+        "" | Out-File -FilePath $todayFile -Append -Encoding UTF8
+        $entry | Out-File -FilePath $todayFile -Append -Encoding UTF8
     }
 
     $detectedTags = [regex]::Matches($Text, '#(\w+)') | ForEach-Object { $_.Value }
@@ -765,7 +771,8 @@ function Add-Entry {
 }
 
 function Show-Today {
-    $fileName = Get-TodayFileName
+    $todayFile = Get-TodayFile
+    $fileName = [System.IO.Path]::GetFileName($todayFile)
     $lines = Get-JournalFile -Dir $journalDir -FileName $fileName -Password $script:cachedPassword
     if ($lines) {
         Write-Host ""
@@ -794,8 +801,8 @@ function Show-RecentEntries {
         }
         Write-Host ""
     } else {
-        $files = Get-ChildItem $journalDir -Filter "Journal_*.txt" | Sort-Object Name -Descending | Select-Object -First $Days
-        if ($files.Count -eq 0) {
+        $files = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)$' } | Sort-Object Name -Descending | Select-Object -First $Days
+        if ($null -eq $files -or $files.Count -eq 0) {
             Write-Host "No journal entries found." -ForegroundColor Yellow
             return
         }
@@ -1002,14 +1009,14 @@ function Show-Calendar {
         }
         Write-Host ""
     } else {
-        $files = Get-ChildItem $journalDir -Filter "Journal_*.txt" -ErrorAction SilentlyContinue
-        if ($files.Count -eq 0) {
+        $files = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)$' } | Sort-Object Name -Descending
+        if ($null -eq $files -or $files.Count -eq 0) {
             Write-Host "No journal entries found." -ForegroundColor Yellow
             return
         }
         Write-Host ""
         Write-Host "Journal entries:" -ForegroundColor Cyan
-        foreach ($file in ($files | Sort-Object Name -Descending)) {
+        foreach ($file in $files) {
             $date = $file.BaseName -replace "Journal_", ""
             $lineCount = (Get-Content $file.FullName | Where-Object { $_ -match "^\[" }).Count
             Write-Host "  $date  ($lineCount entries)" -ForegroundColor White
@@ -1022,12 +1029,18 @@ function Read-DateEntries {
     Write-Host ""
     Show-Calendar
     $date = Read-Host "Enter a date (yyyy-MM-dd)"
-    $fileName = "Journal_$date.txt"
-    $lines = Get-JournalFile -Dir $journalDir -FileName $fileName -Password $script:cachedPassword
-    if ($lines) {
-        Write-Host ""
-        $lines | ForEach-Object { Write-Host $_ }
-        Write-Host ""
+    # Find file with any extension
+    $existing = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match "^Journal_$date\.(txt|md)$" }
+    if ($existing) {
+        $fileName = $existing[0].Name
+        $lines = Get-JournalFile -Dir $journalDir -FileName $fileName -Password $script:cachedPassword
+        if ($lines) {
+            Write-Host ""
+            $lines | ForEach-Object { Write-Host $_ }
+            Write-Host ""
+        } else {
+            Write-Host "No entries for $date." -ForegroundColor Yellow
+        }
     } else {
         Write-Host "No entries for $date." -ForegroundColor Yellow
     }
@@ -1061,17 +1074,17 @@ function Select-JournalDate {
     $todayStr = Get-Date -Format 'yyyy-MM-dd'
     $dateInput = Read-Host $Prompt
     $date = if ([string]::IsNullOrWhiteSpace($dateInput)) { $todayStr } else { $dateInput.Trim() }
-    $fileName = "Journal_$date.txt"
-    $exists = if (Test-JournalLocked $journalDir) {
-        Test-Path (Join-Path $journalDir "$fileName.enc")
-    } else {
-        Test-Path (Join-Path $journalDir $fileName)
-    }
-    if (-not $exists) {
+    
+    # Find file with any supported extension
+    $existing = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match "^Journal_$date\.(txt|md)$" }
+    $encExisting = Get-ChildItem $journalDir -File | Where-Object { $_.Name -match "^Journal_$date\.(txt|md)\.enc$" }
+
+    if (-not $existing -and -not $encExisting) {
         Write-Host "No entries found for $date." -ForegroundColor Yellow
         return $null
     }
-    return $fileName
+    
+    return if ($existing) { $existing[0].Name } else { $encExisting[0].Name -replace '\.enc$', '' }
 }
 
 function Edit-Entry {

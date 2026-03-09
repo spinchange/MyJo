@@ -63,14 +63,14 @@ foreach ($nbName in $nbOrder) {
     if (-not $notebooks.ContainsKey($nbName)) { continue }
     $nbPath = $notebooks[$nbName]
 
-    $files = Get-ChildItem $nbPath -Filter 'Journal_*.txt' -File -ErrorAction SilentlyContinue
+    $files = Get-ChildItem $nbPath -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^Journal_\d{4}-\d{2}-\d{2}\.(txt|md)$' }
 
     $nbEntryCount = 0
     $nbWordCount  = 0
     $nbDateList   = @()
 
     foreach ($f in $files) {
-        if ($f.Name -notmatch 'Journal_(\d{4}-\d{2}-\d{2})\.txt') { continue }
+        if ($f.Name -notmatch 'Journal_(\d{4}-\d{2}-\d{2})\.(txt|md)') { continue }
         $fileDate = $Matches[1]
         $nbDateList += $fileDate
 

@@ -1,2 +1,12 @@
 extension/host/com.myjo.host.json
 dashboard.html
+
+# Experimental/personal scripts not part of MyJo
+ai-debate*.ps1
+claude-interrogation.ps1
+gemini-interrogation.ps1
+gemini-on-trial.ps1
+hot-dog-on-trial.ps1
+trial-of-rlhf.ps1
+triple-agent-debate.ps1
+logs/
