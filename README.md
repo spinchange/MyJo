@@ -88,6 +88,31 @@ myjo -notebook default                    # Switch back to default
 
 Notebooks are stored in your config (`~/.myjo/config.txt`). Old configs (bare path on line 1) are auto-migrated to the new format on first use.
 
+#### Registering existing folders manually
+
+The setup wizard only registers the `default` notebook. If you already have a folder structure of notebooks on disk, you can register them all at once by editing `~/.myjo/config.txt` directly — no need to run `myjo -notebook` for each one:
+
+```
+notebook:ai-chats=G:\My Drive\Journal\ai-chats
+notebook:default=G:\My Drive\Journal
+notebook:personal=G:\My Drive\Journal\personal
+notebook:work=G:\My Drive\Journal\work
+active=default
+encryption=disabled
+editor=code
+```
+
+The config key (the part after `notebook:`) is just a name for the command line — it does not have to match the folder name on disk. This matters when a folder name contains spaces: use a slug as the key and point the path at the real folder.
+
+```
+notebook:journal-2=G:\My Drive\Journal\journal 2
+```
+
+Then switch to it without quoting:
+```powershell
+myjo -notebook journal-2
+```
+
 ### Encryption
 ```powershell
 myjo -lock                   # Encrypt all journal files (prompts for password)
